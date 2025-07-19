@@ -1,13 +1,12 @@
 import { buildTransferTokensTransaction } from "gill/programs/token";
 import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
 import { FordefiSolanaConfig } from './config'
-import * as kit from '@solana/kit';
 import * as gill from 'gill'
 
 
 global.__GILL_DEBUG__ = true
 
-const { rpc, sendAndConfirmTransaction } = gill.createSolanaClient({
+const { rpc } = gill.createSolanaClient({
   urlOrMoniker: "mainnet",
 });
 
@@ -31,8 +30,7 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
       authority: sourceVaultSigner,
       amount: fordefiConfig.amount,
       destination: destVault,
-      tokenProgram: TOKEN_PROGRAM_ADDRESS,
-      computeUnitLimit: 100_000
+      tokenProgram: TOKEN_PROGRAM_ADDRESS
     });
 
     const ix = transferTokensTx.instructions
@@ -40,16 +38,18 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
     if (tokenTransferIxIndex !== -1) {
       const tokenTransferIx = ix[tokenTransferIxIndex];
       if (tokenTransferIx && tokenTransferIx.accounts) {
-        const updatedAccounts = [...tokenTransferIx.accounts];
+        // Upgrade ALL readonly signers to writable signers
+        const updatedAccounts = tokenTransferIx.accounts.map((account) => {
+          if (account.role === 2) { // AccountRole.READONLY_SIGNER
+            return {
+              ...account,
+              role: 3 // AccountRole.WRITABLE_SIGNER
+            };
+          }
+          return account;
+        });
         
-        // make source ATA account (index 2) writable
-        if (updatedAccounts[2]) {
-          updatedAccounts[2] = { 
-            ...updatedAccounts[2],
-            role: kit.upgradeRoleToWritable(updatedAccounts[2].role)
-          };
-        }
-        // new Tx with updated roles
+        // Create new transaction with updated roles
         transferTokensTx = {
           ...transferTokensTx,
           instructions: transferTokensTx.instructions.map((instr, i) => 
@@ -59,11 +59,11 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
       }
     }
     
-    const partiallySignedTx = await gill.partiallySignTransactionMessageWithSigners(transferTokensTx);
-    console.log("Signed transaction: ", partiallySignedTx)
-    const base64EncodedData = Buffer.from(partiallySignedTx.messageBytes).toString('base64');
+    const compiledTx = await gill.compileTransaction(transferTokensTx);
+    console.log("Signed transaction: ", compiledTx)
+    const serializedV0Message = Buffer.from(compiledTx.messageBytes).toString('base64');
 
-    console.debug("Raw data ->", base64EncodedData)
+    console.debug("Serialized v0 Message ->", serializedV0Message)
     
     const jsonBody = {
         "vault_id": fordefiConfig.feePayerVault,
@@ -75,15 +75,16 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
             "type": "solana_serialized_transaction_message",
             "push_mode": "manual",
             "chain": "solana_mainnet",
-            "data": base64EncodedData,
+            "data": serializedV0Message,
+            "signatures": [{ data: null }, { data: null }]
         },
         "wait_for_state": "signed"
     };
 
-    return [jsonBody, base64EncodedData];
+    return jsonBody;
 }
 
-export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, feePayerSignature: any, msgData: any, priorityFee?: number): Promise<any> {  
+export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, signatures: any, msgData: any): Promise<any> {  
   const jsonBody = {
       "vault_id": fordefiConfig.originVault, 
       "signer_type": "api_signer",
@@ -95,10 +96,7 @@ export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, fe
           "push_mode": "auto",
           "chain": "solana_mainnet",
           "data": msgData,
-          "signatures":[
-              {data: feePayerSignature},
-              {data: null}
-          ]
+          "signatures": signatures
       },
       "wait_for_state": "signed"
   };

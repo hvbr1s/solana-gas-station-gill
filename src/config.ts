@@ -26,10 +26,8 @@ export const fordefiConfig: FordefiSolanaConfig = {
     feePayer: process.env.FEE_PAYER_ADDRESS || "",
     feePayerVault: process.env.FEE_PAYER_VAULT || "",
     privateKeyPem: fs.readFileSync('./secret/private.pem', 'utf8'),
-    apiPathEndpoint: '/api/v1/transactions/create-and-wait',
+    apiPathEndpoint: '/api/v1/transactions',
     tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Mainnet USDC
-    //tokenMint:'2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH', // USDG
     decimals: 6n,
     amount: 100_000n, // 1 USCD = 1_000_000n
-    durableNonceAccount: '2hH6Epq6whXwHx9dZubXtYvfZawNXwuQsapZzJD48ush'
 };
