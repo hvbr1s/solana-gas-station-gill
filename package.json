@@ -3,8 +3,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "gas": "ts-node --project tsconfig.json ./src/run.ts",
-        "sag":  "ts-node --project tsconfig.json ./src/run-reversed.ts"
+        "gas": "npx ts-node --project tsconfig.json ./src/run.ts"
     },
     "keywords": [],
     "author": "",
@@ -29,6 +28,7 @@
         "bn.js": "^5.2.1",
         "bs58": "^6.0.0",
         "dotenv": "^16.4.7",
-        "gill": "^0.10.2"
+        "gill": "^0.10.2",
+        "npx": "^10.2.2"
     }
 }
