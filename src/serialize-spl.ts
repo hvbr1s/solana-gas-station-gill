@@ -77,8 +77,7 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
             "chain": "solana_mainnet",
             "data": serializedV0Message,
             "signatures": [{ data: null }, { data: null }]
-        },
-        "wait_for_state": "signed"
+        }
     };
 
     return jsonBody;
@@ -97,8 +96,7 @@ export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, si
           "chain": "solana_mainnet",
           "data": msgData,
           "signatures": signatures
-      },
-      "wait_for_state": "signed"
+      }
   };
 
   return jsonBody;
