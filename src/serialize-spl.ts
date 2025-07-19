@@ -1,7 +1,7 @@
 import { buildTransferTokensTransaction } from "gill/programs/token";
 import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
-import { FordefiSolanaConfig } from './config'
-import * as gill from 'gill'
+import { FordefiSolanaConfig } from './config';
+import * as gill from 'gill';
 
 
 global.__GILL_DEBUG__ = true
