@@ -1,5 +1,5 @@
 import { signFeePayerVault, signWithSourceVault} from './serialize-spl';
-import { createAndSignTx } from '../utils/process_tx';
+import { createAndSignTx } from './process_tx';
 import { signWithApiSigner } from './signer';
 import { transactionFromBase64 } from 'gill';
 import { fordefiConfig } from './config';
