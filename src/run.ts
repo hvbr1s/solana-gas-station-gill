@@ -1,6 +1,6 @@
 import { signFeePayerVault, signWithSourceVault} from './serialize-spl';
 import { createAndSignTx } from './process_tx';
-import { signWithApiSigner } from './signer';
+import { signWithPrivateKey } from './signer';
 import { transactionFromBase64 } from 'gill';
 import { fordefiConfig } from './config';
 import axios from 'axios';
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   const requestBody = JSON.stringify(jsonBody);
   const timestamp = new Date().getTime();
   const feePayerVaultPayload = `${fordefiConfig.apiPathEndpoint}|${timestamp}|${requestBody}`;
-  const feePayerVaultSignature = await signWithApiSigner(feePayerVaultPayload, fordefiConfig.privateKeyPem);
+  const feePayerVaultSignature = await signWithPrivateKey(feePayerVaultPayload, fordefiConfig.privateKeyPem);
 
   const response = await createAndSignTx(
     fordefiConfig.apiPathEndpoint, 
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     timestamp, 
     requestBody
   );
-  console.log("Transaction submitted to Fordefi for broadcast ✅")
+  console.log("Transaction submitted to Fordefi for partial signature ✅")
   await new Promise(resolve => setTimeout(resolve, 2000));
   const signedFordefiTx = await axios.get(`https://api.fordefi.com/api/v1/transactions/${response.data.id}`, {
     headers: {
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
     const sourceVaultRequestBody = JSON.stringify(sourceVaultRequest);
     const sourceVaultTimestamp = new Date().getTime();
     const sourceVaultPayload = `${fordefiConfig.apiPathEndpoint}|${sourceVaultTimestamp}|${sourceVaultRequestBody}`;
-    const sourceVaultSignature = await signWithApiSigner(sourceVaultPayload, fordefiConfig.privateKeyPem);
+    const sourceVaultSignature = await signWithPrivateKey(sourceVaultPayload, fordefiConfig.privateKeyPem);
     
     // Send the second request to Fordefi for the source vault to sign and broadcast
     const finalResponse = await createAndSignTx(
