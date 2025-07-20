@@ -29,5 +29,5 @@ export const fordefiConfig: FordefiSolanaConfig = {
     apiPathEndpoint: '/api/v1/transactions',
     tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Mainnet USDC
     decimals: 6n,
-    amount: 100_000n, // 1 USCD = 1_000_000n
+    amount: 1_000n, // 1 USCD = 1_000_000n
 };

@@ -1,7 +1,7 @@
 import { signFeePayerVault, signWithSourceVault} from './serialize-spl';
 import { createAndSignTx, get_tx } from './process_tx';
 import { signWithPrivateKey } from './signer';
-import { transactionFromBase64 } from 'gill';
+import { transactionFromBase64, getExplorerLink } from 'gill';
 import { fordefiConfig } from './config';
 
 
@@ -12,6 +12,7 @@ async function main(): Promise<void> {
   const feePayerVaultPayload = `${fordefiConfig.apiPathEndpoint}|${timestamp}|${requestBody}`;
   const signedPayloadOne = await signWithPrivateKey(feePayerVaultPayload, fordefiConfig.privateKeyPem);
 
+  console.log("Submitting transaction to Fordefi for partial signature 🔑")
   const response = await createAndSignTx(
     fordefiConfig.apiPathEndpoint, 
     fordefiConfig.accessToken, 
@@ -19,8 +20,8 @@ async function main(): Promise<void> {
     timestamp, 
     requestBody
   );
-  console.log("Transaction submitted to Fordefi for partial signature ✅")
   await new Promise(resolve => setTimeout(resolve, 2000));
+
   const signedFordefiTx = await get_tx(fordefiConfig.apiPathEndpoint, fordefiConfig.accessToken, response.data.id)
   const fordefiPartialTx = await transactionFromBase64(signedFordefiTx.raw_transaction);
 
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
     const sourceVaultPayload = `${fordefiConfig.apiPathEndpoint}|${sourceVaultTimestamp}|${sourceVaultRequestBody}`;
     const signedPayloadTwo = await signWithPrivateKey(sourceVaultPayload, fordefiConfig.privateKeyPem);
     
+    console.log("Submitting transaction to Fordefi for 2cd signature 🔑🔑")
     const finalResponse = await createAndSignTx(
       fordefiConfig.apiPathEndpoint,
       fordefiConfig.accessToken, 
@@ -48,11 +50,12 @@ async function main(): Promise<void> {
       sourceVaultTimestamp,
       sourceVaultRequestBody
     );
-    console.debug(finalResponse.data)
-
-    console.log("Transaction signed by source vault and submitted to network ✅");
-    console.log(`Final transaction ID: ${finalResponse.data.id}`);
-
+    if (finalResponse){
+      console.log("Transaction fully signed and submitted to network ✅");
+      console.log(`Final transaction ID: ${finalResponse.data.id}`);
+      const fullySignedTx = await get_tx(fordefiConfig.apiPathEndpoint, fordefiConfig.accessToken,finalResponse.data.id)
+      console.log(await getExplorerLink({ transaction: fullySignedTx.hash }));
+    }
   } catch (error: any) {
     console.error(`Failed to sign the transaction: ${error.message}`);
   }

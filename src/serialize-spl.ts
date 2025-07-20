@@ -16,9 +16,9 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
     const feePayer = gill.address(fordefiConfig.feePayer)
     const feePayerSigner =  gill.createNoopSigner(feePayer)
     const mint = gill.address(fordefiConfig.tokenMint)
-    console.debug("Source vault -> ", sourceVault)
-    console.debug("Dest vault -> ", destVault)
-    console.debug("Fee payer -> ", feePayer)
+    console.debug("Source vault: ", sourceVault)
+    console.debug("Dest vault: ", destVault)
+    console.debug("Fee payer: ", feePayer)
 
     const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
     
@@ -29,7 +29,8 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
       authority: sourceVaultSigner,
       amount: fordefiConfig.amount,
       destination: destVault,
-      tokenProgram: TOKEN_PROGRAM_ADDRESS
+      tokenProgram: TOKEN_PROGRAM_ADDRESS,
+      version: "legacy"
     });
 
     const ix = transferTokensTx.instructions
@@ -59,8 +60,7 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
     }
     
     const compiledTx = await gill.compileTransaction(transferTokensTx);
-    console.debug("Signed transaction: ", compiledTx)
-    const serializedV0Message = Buffer.from(compiledTx.messageBytes).toString('base64');
+    const serializedMessage = Buffer.from(compiledTx.messageBytes).toString('base64');
     
     const jsonBody = {
         "vault_id": fordefiConfig.feePayerVault,
@@ -72,7 +72,7 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
             "type": "solana_serialized_transaction_message",
             "push_mode": "manual",
             "chain": "solana_mainnet",
-            "data": serializedV0Message,
+            "data": serializedMessage,
             "signatures": [{ data: null }, { data: null }]
         }
     };
@@ -80,7 +80,7 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
     return jsonBody;
 }
 
-export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, signatures: any, msgData: any): Promise<any> {  
+export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, signatures: any, serializedMessage: any): Promise<any> {  
   const jsonBody = {
       "vault_id": fordefiConfig.originVault, 
       "signer_type": "api_signer",
@@ -91,7 +91,7 @@ export async function signWithSourceVault(fordefiConfig: FordefiSolanaConfig, si
           "type": "solana_serialized_transaction_message",
           "push_mode": "auto",
           "chain": "solana_mainnet",
-          "data": msgData,
+          "data": serializedMessage,
           "signatures": signatures
       }
   };
