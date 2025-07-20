@@ -1,43 +1,32 @@
 import { signFeePayerVault, signWithSourceVault} from './serialize-spl';
-import { createAndSignTx } from './process_tx';
+import { createAndSignTx, get_tx } from './process_tx';
 import { signWithPrivateKey } from './signer';
 import { transactionFromBase64 } from 'gill';
 import { fordefiConfig } from './config';
-import axios from 'axios';
 
 
 async function main(): Promise<void> {
-  if (!fordefiConfig.accessToken) {
-    console.error('Error: FORDEFI_API_TOKEN environment variable is not set');
-    return;
-  }
-
-  const jsonBody = await signFeePayerVault(fordefiConfig);
-  const requestBody = JSON.stringify(jsonBody);
+  // Partially sign transaction with fee-payer vault
+  const requestBody = JSON.stringify(await signFeePayerVault(fordefiConfig));
   const timestamp = new Date().getTime();
   const feePayerVaultPayload = `${fordefiConfig.apiPathEndpoint}|${timestamp}|${requestBody}`;
-  const feePayerVaultSignature = await signWithPrivateKey(feePayerVaultPayload, fordefiConfig.privateKeyPem);
+  const signedPayloadOne = await signWithPrivateKey(feePayerVaultPayload, fordefiConfig.privateKeyPem);
 
   const response = await createAndSignTx(
     fordefiConfig.apiPathEndpoint, 
     fordefiConfig.accessToken, 
-    feePayerVaultSignature, 
+    signedPayloadOne, 
     timestamp, 
     requestBody
   );
   console.log("Transaction submitted to Fordefi for partial signature ✅")
   await new Promise(resolve => setTimeout(resolve, 2000));
-  const signedFordefiTx = await axios.get(`https://api.fordefi.com/api/v1/transactions/${response.data.id}`, {
-    headers: {
-      'Authorization': `Bearer ${fordefiConfig.accessToken}`
-    }
-  });
-  const fordefiPartialTx = await transactionFromBase64(signedFordefiTx.data.raw_transaction);
-  const compiledPartialTx = fordefiPartialTx.messageBytes;
+  const signedFordefiTx = await get_tx(fordefiConfig.apiPathEndpoint, fordefiConfig.accessToken, response.data.id)
+  const fordefiPartialTx = await transactionFromBase64(signedFordefiTx.raw_transaction);
 
   const transactionData = {
-      messageBytes: compiledPartialTx,
-      signatures: signedFordefiTx.data.signatures.map((signature: any) => signature.data ? Buffer.from(signature.data, 'base64') : null)
+      messageBytes: fordefiPartialTx.messageBytes,
+      signatures: signedFordefiTx.signatures.map((signature: any) => signature.data ? Buffer.from(signature.data, 'base64') : null)
   }
   const serializedMessage = Buffer.from(
       transactionData.messageBytes
@@ -45,18 +34,17 @@ async function main(): Promise<void> {
   const signatures = transactionData.signatures.map((x: any) => ({ data: x instanceof Buffer ? x.toString('base64') : null }))
   
   try {
-    // Create payload for source Vault signature
+    // Partially sign transaction with source vault and broadcast
     const sourceVaultRequest = await signWithSourceVault(fordefiConfig, signatures, serializedMessage);
     const sourceVaultRequestBody = JSON.stringify(sourceVaultRequest);
     const sourceVaultTimestamp = new Date().getTime();
     const sourceVaultPayload = `${fordefiConfig.apiPathEndpoint}|${sourceVaultTimestamp}|${sourceVaultRequestBody}`;
-    const sourceVaultSignature = await signWithPrivateKey(sourceVaultPayload, fordefiConfig.privateKeyPem);
+    const signedPayloadTwo = await signWithPrivateKey(sourceVaultPayload, fordefiConfig.privateKeyPem);
     
-    // Send the second request to Fordefi for the source vault to sign and broadcast
     const finalResponse = await createAndSignTx(
       fordefiConfig.apiPathEndpoint,
       fordefiConfig.accessToken, 
-      sourceVaultSignature,
+      signedPayloadTwo,
       sourceVaultTimestamp,
       sourceVaultRequestBody
     );

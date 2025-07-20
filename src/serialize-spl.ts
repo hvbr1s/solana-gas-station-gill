@@ -3,7 +3,6 @@ import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
 import { FordefiSolanaConfig } from './config';
 import * as gill from 'gill';
 
-
 global.__GILL_DEBUG__ = true
 
 const { rpc } = gill.createSolanaClient({
@@ -60,10 +59,8 @@ export async function signFeePayerVault(fordefiConfig: FordefiSolanaConfig): Pro
     }
     
     const compiledTx = await gill.compileTransaction(transferTokensTx);
-    console.log("Signed transaction: ", compiledTx)
+    console.debug("Signed transaction: ", compiledTx)
     const serializedV0Message = Buffer.from(compiledTx.messageBytes).toString('base64');
-
-    console.debug("Serialized v0 Message ->", serializedV0Message)
     
     const jsonBody = {
         "vault_id": fordefiConfig.feePayerVault,
